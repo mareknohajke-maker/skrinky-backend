@@ -113,8 +113,31 @@ const login = async (req, res) => {
 
 // Získať profil aktuálneho používateľa
 const getProfile = (req, res) => {
-  const { password, ...userWithoutPassword } = req.user;
-  res.json(userWithoutPassword);
+  try {
+    const user = req.user;
+    const { password: _, ...userWithoutPassword } = user;
+    
+    // Pridaj názvy skupín
+    const userGroups = user.groups || ['group-all'];
+    const groupDetails = userGroups.map(groupId => {
+      const group = database.findGroupById(groupId);
+      return group ? {
+        id: group.id,
+        name: group.name,
+        code: group.code,
+        color: group.color,
+        icon: group.icon
+      } : null;
+    }).filter(g => g !== null);
+    
+    res.json({
+      ...userWithoutPassword,
+      groupDetails  // Pridané pre frontend
+    });
+  } catch (error) {
+    console.error('Error getting profile:', error);
+    res.status(500).json({ error: 'Chyba pri načítaní profilu' });
+  }
 };
 
 module.exports = {

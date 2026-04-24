@@ -1,33 +1,82 @@
+const { v4: uuidv4 } = require('uuid');
 // In-memory databáza (v produkcii použite napr. MongoDB, PostgreSQL)
 class Database {
   constructor() {
     this.users = [];
+    this.groups = [];
     this.lockers = [];
     this.history = [];
     this.initialize();
   }
 
   initialize() {
-    // Vytvorenie 12 skriniek
-    for (let i = 1; i <= 12; i++) {
-      this.lockers.push({
-        id: `locker-${i}`,
-        number: i,
-        status: 'free', // 'free', 'occupied', 'reserved'
-        reservedBy: null,
-        reservedByName: null,
-        reservedAt: null,
-        reservedUntil: null,
-        lastOpened: null,
-      });
+  // Vytvor default skupiny
+  this.groups = [
+    {
+      id: 'group-all',
+      name: 'Všetci',
+      code: 'all',
+      color: '#9E9E9E',
+      icon: '👥',
+      description: 'Všeobecné skrinky pre všetkých',
+      isDefault: true
+    },
+    {
+      id: 'group-men',
+      name: 'Muži',
+      code: 'men',
+      color: '#2196F3',
+      icon: '👨',
+      description: 'Skrinky pre mužov',
+      isDefault: false
+    },
+    {
+      id: 'group-women',
+      name: 'Ženy',
+      code: 'women',
+      color: '#E91E63',
+      icon: '👩',
+      description: 'Skrinky pre ženy',
+      isDefault: false
     }
+  ];
+
+  // Vytvor 12 skriniek (s názvami a skupinami)
+  for (let i = 1; i <= 12; i++) {
+    const group = i <= 6 ? 'group-men' : (i <= 10 ? 'group-women' : 'group-all');
+    this.lockers.push({
+      id: `locker-${i}`,
+      number: i,
+      name: `Skrinka ${i}`,           // NOVÉ
+      group: group,                   // NOVÉ
+      status: 'free',
+      reservedBy: null,
+      reservedByName: null,
+      reservedAt: null,
+      reservedUntil: null,
+      lastOpened: null,
+      lastClosed: null,
+    });
   }
+}
 
   // USERS
   createUser(userData) {
-    this.users.push(userData);
-    return userData;
-  }
+  const user = {
+    id: `user-${uuidv4()}`,
+    firstName: userData.firstName,
+    lastName: userData.lastName,
+    email: userData.email.toLowerCase(),
+    phone: userData.phone,
+    gender: userData.gender,
+    password: userData.password, // už hashnuté
+    role: userData.role || 'member',
+    groups: userData.groups || ['group-all'],  // NOVÉ - default skupina
+    createdAt: new Date().toISOString(),
+  };
+  this.users.push(user);
+  return user;
+}
 
   findUserById(id) {
     return this.users.find(u => u.id === id);
@@ -95,6 +144,109 @@ class Database {
     this.history = [];
     this.initialize();
   }
+
+  // ========== GROUPS ==========
+createGroup(groupData) {
+  const group = {
+    id: `group-${uuidv4()}`,
+    name: groupData.name,
+    code: groupData.code || groupData.name.toLowerCase().replace(/\s+/g, '-'),
+    color: groupData.color || '#9E9E9E',
+    icon: groupData.icon || '📁',
+    description: groupData.description || '',
+    isDefault: false,
+    createdAt: new Date().toISOString()
+  };
+  this.groups.push(group);
+  return group;
+}
+
+getAllGroups() {
+  return this.groups;
+}
+
+findGroupById(id) {
+  return this.groups.find(g => g.id === id);
+}
+
+findGroupByCode(code) {
+  return this.groups.find(g => g.code === code);
+}
+
+updateGroup(id, updates) {
+  const index = this.groups.findIndex(g => g.id === id);
+  if (index === -1) return null;
+  
+  this.groups[index] = {
+    ...this.groups[index],
+    ...updates,
+    id: this.groups[index].id, // Zachovaj ID
+    isDefault: this.groups[index].isDefault // Zachovaj default flag
+  };
+  return this.groups[index];
+}
+
+deleteGroup(id) {
+  const group = this.findGroupById(id);
+  if (!group || group.isDefault) return false; // Nemožno zmazať default skupiny
+  
+  const index = this.groups.findIndex(g => g.id === id);
+  if (index === -1) return false;
+  
+  this.groups.splice(index, 1);
+  return true;
+}
+
+// ========== LOCKERS (rozšírené) ==========
+createLocker(lockerData) {
+  const locker = {
+    id: `locker-${uuidv4()}`,
+    number: lockerData.number,
+    name: lockerData.name || `Skrinka ${lockerData.number}`,
+    group: lockerData.group || 'group-all',
+    status: 'free',
+    reservedBy: null,
+    reservedByName: null,
+    reservedAt: null,
+    reservedUntil: null,
+    lastOpened: null,
+    lastClosed: null,
+    createdAt: new Date().toISOString()
+  };
+  this.lockers.push(locker);
+  return locker;
+}
+
+deleteLocker(id) {
+  const index = this.lockers.findIndex(l => l.id === id);
+  if (index === -1) return false;
+  
+  this.lockers.splice(index, 1);
+  return true;
+}
+
+// Rozšírenie updateLocker
+updateLocker(id, updates) {
+  const index = this.lockers.findIndex(l => l.id === id);
+  if (index === -1) return null;
+  
+  this.lockers[index] = {
+    ...this.lockers[index],
+    ...updates,
+    id: this.lockers[index].id // Zachovaj ID
+  };
+  return this.lockers[index];
+}
+
+// ========== USERS (rozšírené) ==========
+updateUserGroups(userId, groupIds) {
+  const user = this.findUserById(userId);
+  if (!user) return null;
+  
+  user.groups = groupIds;
+  return user;
+}
+
 }
 
 module.exports = new Database();

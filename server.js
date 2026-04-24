@@ -24,7 +24,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/lockers', require('./routes/lockers'));
 app.use('/api/history', require('./routes/history'));
-
+app.use('/api/groups', require('./routes/groups'));
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
