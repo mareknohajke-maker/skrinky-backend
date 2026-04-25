@@ -22,12 +22,28 @@ const getAllLockers = (req, res) => {
     const user = req.user;
     let lockers = database.getAllLockers();
     
+    console.log('🔍 GET /api/lockers - User:', user.email, 'Role:', user.role);
+    console.log('   Total lockers:', lockers.length);
+    
     // Ak nie je owner, filtruj len skrinky z jeho skupín
     if (user.role !== 'owner') {
-      const userGroups = user.groups || ['group-all'];
+      const userGroups = user.groups || [];
+      
+      console.log('   User groups:', userGroups);
+      
+      // Ak používateľ NEMÁ žiadne skupiny, vráť prázdne pole
+      if (userGroups.length === 0) {
+        console.log('   ⚠️ User has NO groups!');
+        return res.json([]);
+      }
+      
+      // Filtruj skrinky: zobraz skrinku ak jej group je v userGroups
       lockers = lockers.filter(locker => {
-        return userGroups.includes(locker.group) || locker.group === 'group-all';
+        return userGroups.includes(locker.group);
       });
+      
+      console.log('   Filtered lockers:', lockers.length);
+      console.log('   Groups shown:', [...new Set(lockers.map(l => l.group))]);
     }
     
     // Pridaj detaily skupiny pre každú skrinku
@@ -45,6 +61,7 @@ const getAllLockers = (req, res) => {
       };
     });
     
+    console.log('   ✅ Returning', lockersWithGroupDetails.length, 'lockers');
     res.json(lockersWithGroupDetails);
   } catch (error) {
     console.error('Error getting lockers:', error);

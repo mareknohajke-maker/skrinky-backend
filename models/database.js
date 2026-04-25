@@ -9,8 +9,8 @@ class Database {
     this.initialize();
   }
 
-  initialize() {
-  // Vytvor default skupiny
+initialize() {
+  // NAJPRV vytvor skupiny
   this.groups = [
     {
       id: 'group-all',
@@ -19,7 +19,8 @@ class Database {
       color: '#9E9E9E',
       icon: '👥',
       description: 'Všeobecné skrinky pre všetkých',
-      isDefault: true
+      isDefault: true,
+      createdAt: new Date().toISOString()
     },
     {
       id: 'group-men',
@@ -28,7 +29,8 @@ class Database {
       color: '#2196F3',
       icon: '👨',
       description: 'Skrinky pre mužov',
-      isDefault: false
+      isDefault: true,
+      createdAt: new Date().toISOString()
     },
     {
       id: 'group-women',
@@ -37,18 +39,34 @@ class Database {
       color: '#E91E63',
       icon: '👩',
       description: 'Skrinky pre ženy',
-      isDefault: false
+      isDefault: true,
+      createdAt: new Date().toISOString()
     }
   ];
 
-  // Vytvor 12 skriniek (s názvami a skupinami)
+  // POTOM vytvor 12 skriniek s pridelenými skupinami
   for (let i = 1; i <= 12; i++) {
-    const group = i <= 6 ? 'group-men' : (i <= 10 ? 'group-women' : 'group-all');
+    let group, name;
+    
+    if (i <= 6) {
+      // Skrinky 1-6: Muži
+      group = 'group-men';
+      name = `Muži - Skrinka ${i}`;
+    } else if (i <= 10) {
+      // Skrinky 7-10: Ženy
+      group = 'group-women';
+      name = `Ženy - Skrinka ${i}`;
+    } else {
+      // Skrinky 11-12: Všetci
+      group = 'group-all';
+      name = `Všetci - Skrinka ${i}`;
+    }
+    
     this.lockers.push({
       id: `locker-${i}`,
       number: i,
-      name: `Skrinka ${i}`,           // NOVÉ
-      group: group,                   // NOVÉ
+      name: name,
+      group: group,
       status: 'free',
       reservedBy: null,
       reservedByName: null,
@@ -56,8 +74,22 @@ class Database {
       reservedUntil: null,
       lastOpened: null,
       lastClosed: null,
+      createdAt: new Date().toISOString()
     });
   }
+
+  console.log('✅ Inicializácia dokončená:');
+  console.log(`   📦 Skupiny: ${this.groups.length}`);
+  console.log(`   🗄️  Skrinky: ${this.lockers.length}`);
+  
+  // Vypíš rozdelenie skriniek
+  const menCount = this.lockers.filter(l => l.group === 'group-men').length;
+  const womenCount = this.lockers.filter(l => l.group === 'group-women').length;
+  const allCount = this.lockers.filter(l => l.group === 'group-all').length;
+  
+  console.log(`   👨 Muži: ${menCount} skriniek`);
+  console.log(`   👩 Ženy: ${womenCount} skriniek`);
+  console.log(`   👥 Všetci: ${allCount} skriniek`);
 }
 
   // USERS
@@ -99,8 +131,8 @@ class Database {
 
   // LOCKERS
   getAllLockers() {
-    return this.lockers;
-  }
+  return this.lockers;
+}
 
   findLockerById(id) {
     return this.lockers.find(l => l.id === id);

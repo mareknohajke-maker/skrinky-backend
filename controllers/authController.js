@@ -16,11 +16,11 @@ const register = async (req, res) => {
     const { firstName, lastName, email, phone, gender, password } = req.body;
 
     // Validácia
-    if (!firstName || !lastName || !email || !phone || !gender || !password) {
+    if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ error: 'Všetky polia sú povinné' });
     }
 
-    // Kontrola, či email už existuje
+    // Skontroluj či email už existuje
     const existingUser = database.findUserByEmail(email);
     if (existingUser) {
       return res.status(400).json({ error: 'Email už existuje' });
@@ -29,33 +29,43 @@ const register = async (req, res) => {
     // Hash hesla
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Vytvorenie používateľa
-    const user = {
-      id: uuidv4(),
+    // Automatické pridelenie skupiny podľa pohlavia
+    let userGroups = ['group-all']; // Default skupina
+    
+    if (gender === 'muž') {
+      userGroups.push('group-men');
+    } else if (gender === 'žena') {
+      userGroups.push('group-women');
+    }
+
+    // Vytvor používateľa
+    const user = database.createUser({
       firstName,
       lastName,
-      email: email.toLowerCase(),
+      email,
       phone,
       gender,
       password: hashedPassword,
-      role: 'member', // Všetci noví používatelia sú členovia
-      createdAt: new Date().toISOString(),
-    };
+      role: 'member',
+      groups: userGroups  // NOVÉ - pridelené skupiny!
+    });
 
-    database.createUser(user);
+    // Vygeneruj JWT token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    // Generovanie tokenu
-    const token = generateToken(user.id);
-
-    // Odpoveď (bez hesla)
+    // Vráť používateľa bez hesla
     const { password: _, ...userWithoutPassword } = user;
-    
+
     res.status(201).json({
       token,
-      user: userWithoutPassword,
+      user: userWithoutPassword
     });
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('Error registering user:', error);
     res.status(500).json({ error: 'Chyba pri registrácii' });
   }
 };
